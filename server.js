@@ -49,6 +49,23 @@ function getDbConnection() {
     return withTimeout(pool.getConnection(), 'Database connection timed out');
 }
 
+async function ensureTicketStudentIdColumn(connection) {
+    const [columns] = await connection.query(`
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'tickets'
+          AND COLUMN_NAME IN ('customer_name', 'student_id')
+    `);
+    const columnNames = columns.map(col => col.COLUMN_NAME);
+
+    if (columnNames.includes('customer_name') && !columnNames.includes('student_id')) {
+        await connection.query('ALTER TABLE tickets CHANGE customer_name student_id VARCHAR(100)');
+    } else if (!columnNames.includes('student_id')) {
+        await connection.query('ALTER TABLE tickets ADD COLUMN student_id VARCHAR(100) AFTER queue_num');
+    }
+}
+
 // Initialize database tables
 async function initializeDatabase() {
     if (isInitializingDatabase) return;
@@ -78,7 +95,7 @@ async function initializeDatabase() {
             CREATE TABLE IF NOT EXISTS tickets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 queue_num INT UNIQUE NOT NULL,
-                customer_name VARCHAR(100),
+                student_id VARCHAR(100),
                 service_type VARCHAR(50),
                 status ENUM('Pending', 'Calling', 'Served', 'Cancelled') DEFAULT 'Pending',
                 window_id INT,
@@ -88,6 +105,7 @@ async function initializeDatabase() {
                 INDEX idx_queue_num (queue_num)
             )
         `);
+        await ensureTicketStudentIdColumn(connection);
 
         // Insert default windows if they don't exist
         await connection.query(`
@@ -123,13 +141,13 @@ async function syncMemoryTicketsToDatabase() {
     try {
         for (const ticket of tickets) {
             await connection.query(
-                `INSERT INTO tickets (queue_num, customer_name, service_type, status)
+                `INSERT INTO tickets (queue_num, student_id, service_type, status)
                  VALUES (?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE
-                    customer_name = VALUES(customer_name),
+                    student_id = VALUES(student_id),
                     service_type = VALUES(service_type),
                     status = VALUES(status)`,
-                [ticket.queue_num, ticket.customer_name, ticket.service_type, ticket.status]
+                [ticket.queue_num, ticket.student_id, ticket.service_type, ticket.status]
             );
         }
     } finally {
@@ -180,21 +198,22 @@ app.get('/get-system-status', async (req, res) => {
 // Add new ticket
 app.post('/add-ticket', async (req, res) => {
     try {
-        const { queue_num, customer_name, service_type } = req.body;
+        const { queue_num, customer_name, student_id, service_type } = req.body;
+        const studentId = student_id || customer_name || 'Student';
         await ensureDatabase();
         
         if (useDatabase && pool) {
             const connection = await getDbConnection();
 
             const [result] = await connection.query(
-                `INSERT INTO tickets (queue_num, customer_name, service_type, status)
+                `INSERT INTO tickets (queue_num, student_id, service_type, status)
                  VALUES (?, ?, ?, "Pending")
                  ON DUPLICATE KEY UPDATE
-                    customer_name = VALUES(customer_name),
+                    student_id = VALUES(student_id),
                     service_type = VALUES(service_type),
                     status = "Pending",
                     window_id = NULL`,
-                [queue_num, customer_name, service_type]
+                [queue_num, studentId, service_type]
             );
             
             connection.release();
@@ -204,7 +223,7 @@ app.post('/add-ticket', async (req, res) => {
                 ticket: { 
                     id: result.insertId,
                     queue_num, 
-                    customer_name, 
+                    student_id: studentId,
                     service_type, 
                     status: 'Pending' 
                 } 
@@ -212,7 +231,7 @@ app.post('/add-ticket', async (req, res) => {
         }
         
         // Use in-memory storage
-        const ticket = { queue_num, customer_name, service_type, status: 'Pending' };
+        const ticket = { queue_num, student_id: studentId, service_type, status: 'Pending' };
         const ticketIdx = tickets.findIndex(t => Number(t.queue_num) === Number(queue_num));
         if (ticketIdx === -1) {
             tickets.push(ticket);

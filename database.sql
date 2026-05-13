@@ -19,7 +19,7 @@ CREATE TABLE windows (
 CREATE TABLE tickets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     queue_num INT UNIQUE NOT NULL,
-    customer_name VARCHAR(100),
+    student_id VARCHAR(100),
     service_type VARCHAR(50),
     status ENUM('Pending', 'Calling', 'Served', 'Cancelled') DEFAULT 'Pending',
     window_id INT,

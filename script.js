@@ -181,7 +181,7 @@ function finishTransaction() {
 
     const payload = {
         queue_num: parseInt(qNum),
-        customer_name: studentID || localStorage.getItem("studentEmail") || "Student",
+        student_id: studentID || localStorage.getItem("studentEmail") || "Student",
         service_type: type
     };
 
@@ -210,7 +210,7 @@ function finishTransaction() {
         let records = JSON.parse(localStorage.getItem('studentRecords')) || [];
         const record = {
             queue_num: payload.queue_num,
-            studentID: payload.customer_name,
+            studentID: payload.student_id,
             email: localStorage.getItem("studentEmail"),
             date: date,
             time: time,

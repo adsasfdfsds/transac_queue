@@ -184,7 +184,7 @@ function loadAdminData() {
             return `
                 <tr style="border-bottom: 1px solid #ddd;">
                     <td style="padding: 10px; font-weight: bold;">#${t.queue_num || t.id}</td>
-                    <td>${t.customer_name || t.studentID || '---'}</td>
+                    <td>${t.student_id || t.customer_name || t.studentID || '---'}</td>
                     <td>${t.service_type || t.type || 'General'}</td>
                     <td>${status}</td>
                     <td>
