@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="home.css">
+    <title>Notifications</title>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="nav-container">
+        <ul class="nav-left">
+            <li><a href="index.html">Home</a></li>
+        </ul>
+        <ul class="nav-right">
+            <li><a href="notifications.html">Notifications</a></li>
+            <li><a href="records.html">Records</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="Login-Container">
+    <div class="Login-Box">
+        <h1>NOTIFICATIONS</h1>
+        <div id="notif-display"></div>
+    </div>
+</div>
+
+<script>
+const API_BASE = window.location.port === "3000"
+    ? window.location.origin
+    : "http://localhost:3000";
+
+document.addEventListener("DOMContentLoaded", () => {
+    const isSubmitted = localStorage.getItem("transactionSubmitted");
+
+    if (isSubmitted !== "true") {
+        alert("You must complete your transaction before viewing records/notifications.");
+        window.location.href = "index.html";
+        return;
+    }
+
+    updateNotif();
+    setInterval(updateNotif, 2000);
+});
+
+function updateNotif() {
+    const qNum = localStorage.getItem("queue_num");
+    const display = document.getElementById("notif-display");
+
+    if (!display) return;
+
+    fetch(`${API_BASE}/get-system-status`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.currentCall && String(data.currentCall.queue_num) === String(qNum)) {
+                const assignedWindow = data.currentCall.window || "the assigned window";
+                display.innerHTML = `
+                    <div style="text-align: center; padding: 30px; border: 3px solid gold; border-radius: 10px; background: #ffeb3b;">
+                        <h2 style="color: #333; margin: 0;">YOUR TURN!</h2>
+                        <h1 style="font-size: 3rem; color: #d32f2f; margin: 20px 0;">#${data.currentCall.queue_num}</h1>
+                        <p style="color: #333; font-size: 1.2rem; margin: 8px 0;">Assigned Window: <strong>${assignedWindow}</strong></p>
+                        <p style="color: #333; font-size: 1.2rem; margin: 8px 0;">Please proceed to the counter.</p>
+                    </div>`;
+            } else {
+                const onlineWindows = Object.entries(data.windowStatuses || {})
+                    .filter(([, status]) => status === "Online")
+                    .map(([windowName]) => windowName);
+                const onlineWindowText = onlineWindows.length > 0
+                    ? `Open counter${onlineWindows.length > 1 ? "s" : ""}: ${onlineWindows.join(", ")}`
+                    : "No counters are online right now.";
+
+                display.innerHTML = `
+                    <div style="text-align: center; padding: 30px;">
+                        <p style="font-size: 1.2rem; color: #666;">Waiting for your turn...</p>
+                        <p style="font-size: 0.9rem; color: #999;">Your Queue: #${qNum}</p>
+                        <p style="font-size: 1rem; color: #555; margin-top: 15px;">${onlineWindowText}</p>
+                    </div>`;
+            }
+        })
+        .catch(err => {
+            console.error("Notification fetch error:", err);
+            display.innerHTML = "<p>Error loading notifications</p>";
+        });
+}
+</script>
+
+</body>
+</html>

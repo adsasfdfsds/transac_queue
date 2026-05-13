@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="home.css">
+    <title>Records</title>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="nav-container">
+        <ul class="nav-left">
+            <li><a href="index.html">Home</a></li>
+        </ul>
+        <ul class="nav-right">
+            <li><a href="notifications.html">Notifications</a></li>
+            <li><a href="records.html">Records</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="Login-Container">
+    <div class="Login-Box">
+        <h1>TRANSACTION RECORDS</h1>
+
+        <table style="width:100%; color:white; border-collapse: collapse; background: #2a3f5f; border-radius: 8px; overflow: hidden;">
+            <thead style="background: #090088;">
+                <tr>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Queue #</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Service Type</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Date</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Time</th>
+                </tr>
+            </thead>
+            <tbody id="records-table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const isSubmitted = localStorage.getItem("transactionSubmitted");
+
+    if (isSubmitted !== "true") {
+        alert("You must complete your transaction before viewing records.");
+        window.location.href = "index.html";
+        return; 
+    }
+
+    const tableBody = document.getElementById('records-table-body');
+    const records = JSON.parse(localStorage.getItem('studentRecords')) || [];
+
+    if (records.length === 0) {
+        tableBody.innerHTML = "<tr><td colspan='4' style='padding: 20px; text-align: center;'>No transactions found.</td></tr>";
+        return;
+    }
+
+    tableBody.innerHTML = records.map((item, idx) => `
+        <tr style="border-bottom: 1px solid #555; ${idx % 2 === 0 ? 'background: rgba(0,0,0,0.2);' : ''}">
+            <td style="padding: 12px; border: 1px solid #555;">#${item.queue_num}</td>
+            <td style="padding: 12px; border: 1px solid #555;">${item.type || 'General'}</td>
+            <td style="padding: 12px; border: 1px solid #555;">${item.date || '---'}</td>
+            <td style="padding: 12px; border: 1px solid #555;">${item.time || '---'}</td>
+        </tr>
+    `).join('');
+});
+</script>
+</body>
+</html>

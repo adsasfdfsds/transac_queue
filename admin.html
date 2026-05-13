@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - Queue System</title>
+    <link rel="stylesheet" href="home.css">
+</head>
+<body style="background-color: #f4f4f4; color: #333;">
+    <nav class="navbar">
+        <div class="nav-container">
+            <ul class="nav-left">
+                <li><strong>ADMIN PANEL</strong></li>
+            </ul>
+            <ul class="nav-right">
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="Admin-Container" style="padding: 50px;">
+        <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="window-title">Admin Panel - Window 1</h2>
+            
+            <div class="admin-controls" style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <label class="switch">
+                    <strong>Window Status: </strong>
+                    <input type="checkbox" id="status-toggle" onchange="toggleStatus()">
+                    <span id="status-text" style="font-weight: bold; color: red;">Offline</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="window-indicators" style="display: flex; gap: 20px; padding: 15px; background: #ddd; border-radius: 5px; margin: 20px 0;">
+            <div>W1: <span id="win1-status" style="font-weight: bold;">Offline</span></div>
+            <div>W2: <span id="win2-status" style="font-weight: bold;">Offline</span></div>
+            <div>W3: <span id="win3-status" style="font-weight: bold;">Offline</span></div>
+        </div>
+
+        <h2>Live Transaction Queue</h2>
+        <table id="admin-table" style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <thead style="background: #090088; color: white;">
+                <tr>
+                    <th style="padding: 15px;">Queue #</th>
+                    <th>Customer</th>
+                    <th>Service Type</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="queue-body" style="text-align: center;">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+const API_BASE = window.location.port === "3000"
+    ? window.location.origin
+    : "http://localhost:3000";
+
+function parseJsonResponse(res) {
+    return res.text().then(text => {
+        const data = text ? JSON.parse(text) : {};
+        return { ok: res.ok, status: res.status, data };
+    });
+}
+
+const loggedInEmail = localStorage.getItem("adminEmail");
+let myWindow = "Window 1"; 
+if (loggedInEmail === "admin2@gmail.com") myWindow = "Window 2";
+if (loggedInEmail === "admin3@gmail.com") myWindow = "Window 3";
+
+let isSyncing = false;
+
+window.onload = function() {
+    const isAdmin = localStorage.getItem("isAdmin");
+    if (isAdmin !== "true") {
+        alert("Unauthorized access");
+        window.location.href = "index.html";
+        return;
+    }
+    
+    document.getElementById('window-title').innerText = "Admin Panel - " + myWindow;
+    loadAdminData();
+    setInterval(loadAdminData, 2000); 
+};
+
+function toggleStatus() {
+    const checkbox = document.getElementById('status-toggle');
+    const statusText = document.getElementById('status-text');
+    
+    // Check the box's current state right now
+    const isOnline = checkbox.checked;
+    const newStatus = isOnline ? "Online" : "Offline";
+    isSyncing = true;
+
+    fetch(`${API_BASE}/update-window-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ window: myWindow, status: newStatus })
+    })
+    .then(parseJsonResponse)
+    .then(({ ok, status, data }) => {
+        if (ok && data.success) {
+            // Update the text and color immediately based on the REAL switch state
+            statusText.innerText = newStatus;
+            statusText.style.color = isOnline ? "green" : "red";
+            loadAdminData();
+        } else {
+            checkbox.checked = !isOnline;
+            alert("Unable to update window status: " + (data.error || `Server error ${status}`));
+        }
+    })
+    .catch(err => {
+        checkbox.checked = !isOnline;
+        console.error("Update failed:", err);
+        alert("Unable to update window status: " + err.message);
+    })
+    .finally(() => {
+        isSyncing = false;
+    });
+}
+
+function loadAdminData() {
+    fetch(`${API_BASE}/get-system-status`)
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        if (!data || !data.windowStatuses) {
+            console.error("Invalid response from get-system-status");
+            return;
+        }
+        
+        console.log("System status received:", data.windowStatuses);
+        
+        // windows indicators (status)
+        const w1Status = data.windowStatuses["Window 1"] || "Offline";
+        const w2Status = data.windowStatuses["Window 2"] || "Offline";
+        const w3Status = data.windowStatuses["Window 3"] || "Offline";
+        
+        document.getElementById('win1-status').innerText = w1Status;
+        document.getElementById('win2-status').innerText = w2Status;
+        document.getElementById('win3-status').innerText = w3Status;
+        
+        // color status
+        ['win1-status', 'win2-status', 'win3-status'].forEach(id => {
+            const el = document.getElementById(id);
+            el.style.color = el.innerText === "Online" ? "green" : "red";
+        });
+
+        // update checkbox (only if not currently syncing to avoid conflicts)
+        if (!isSyncing) {
+            const cb = document.getElementById('status-toggle');
+            const st = document.getElementById('status-text');
+            const currentWindowStatus = data.windowStatuses[myWindow] || "Offline";
+            console.log("Updating checkbox for", myWindow, "status:", currentWindowStatus);
+            cb.checked = (currentWindowStatus === "Online");
+            st.innerText = currentWindowStatus;
+            st.style.color = cb.checked ? "green" : "red";
+        } else {
+            console.log("Skipping checkbox update because isSyncing is true");
+        }
+    })
+    .catch(err => console.error("Error loading system status:", err));
+
+    fetch(`${API_BASE}/get-tickets`)
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+    })
+    .then(tickets => {
+        const body = document.getElementById('queue-body');
+        if (!tickets || tickets.length === 0) {
+            body.innerHTML = "<tr><td colspan='5' style='padding: 20px;'>No pending tickets.</td></tr>";
+            return;
+        }
+        
+        body.innerHTML = tickets.map(t => {
+            const status = t.status === 'Pending' ? '⏳ Pending' : 
+                          t.status === 'Calling' ? '📢 Calling' : 
+                          t.status === 'Served' ? '✅ Served' : '❌ Cancelled';
+            
+            return `
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 10px; font-weight: bold;">#${t.queue_num || t.id}</td>
+                    <td>${t.customer_name || t.studentID || '---'}</td>
+                    <td>${t.service_type || t.type || 'General'}</td>
+                    <td>${status}</td>
+                    <td>
+                        ${t.status === 'Pending' ? `<button onclick="callNext(${t.queue_num || t.id})" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Call Next</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    })
+    .catch(err => console.error("Error loading tickets:", err));
+}
+
+function callNext(queueNum) {
+    fetch(`${API_BASE}/call-next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            queue_num: queueNum, 
+            windowName: myWindow 
+        })
+    })
+    .then(parseJsonResponse)
+    .then(({ ok, status, data }) => {
+        if (ok && data.success) {
+            console.log("Called: #" + queueNum + " at " + myWindow);
+            loadAdminData();
+        } else {
+            alert("Unable to call ticket: " + (data.error || `Server error ${status}`));
+        }
+    })
+    .catch(err => {
+        console.error("Error calling next:", err);
+        alert("Unable to call ticket: " + err.message);
+    });
+}
+
+function logout() {
+    localStorage.clear();
+    window.location.href = "index.html";
+}
+    </script>
+</body>
+</html>

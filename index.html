@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="home.css">
+	<script src="script.js" defer></script>
+	<title>Queue Management System</title>
+</head>
+<body>
+	<nav class="navbar hidden" id="navbar">
+		<div class="nav-container">
+			<ul class="nav-left">
+				<li><a href="javascript:void(0)" onclick="goHome()">Home</a></li>
+			</ul>
+			<ul class="nav-right">
+				<li><a href="javascript:void(0)" onclick="showNotifications()">Notifications</a></li>
+				<li><a href="javascript:void(0)" onclick="showRecords()">Records</a></li>
+				<li><a href="javascript:void(0)" onclick="logout()">Logout</a></li>
+			</ul>
+		</div>
+	</nav>
+	<main>
+		<div id="login-screen" class="Login-Container">
+			<div class="Login-Box">
+				<h1>QUEUE SYSTEM</h1>
+				<p style="color: #bbb; margin-bottom: 30px;">Please login to continue</p>
+				<input type="email" id="user-email" placeholder="Email Address" required>
+				<input type="text" id="studentID" placeholder="Student ID" required>
+				<button onclick="checkLogin()">Enter</button>
+				<p style="font-size: 0.8rem; color: #aaa; margin-top: 20px;">
+					Demo: student ID 20206767, email JomarieImgay@gmail.com or admin emails
+				</p>
+			</div>
+		</div>
+		<div id="generate-screen" class="Login-Container hidden">
+			<div class="Login-Box">
+				<div id="pre-generate">
+					<h1>Welcome!</h1>
+					<p>Click below to get your queue number.</p>
+					<button id="gen-btn" onclick="generateQueue()" class="primary-btn">Generate Number</button>
+				</div>
+				<div id="queue-result" class="hidden">
+					<h1>Your Queue Number</h1>
+					<p id="display-studentID" style="color: #aaa;"></p>
+					<h1 id="queue-display" style="font-size: 5rem; margin: 40px 0;"></h1>
+                    <p id="current-serving-text" style="font-size: 1.1rem;">Now Serving: <span style="color: #00f0ff; font-weight: bold;">#---</span></p>
+					<button class="continue-btn" onclick="goToDetails()" style="margin-top: 20px;">Continue</button>
+					<div id="home-status-display" style="text-align: center; margin-top: 40px; padding: 20px; border: 2px solid #00f0ff; border-radius: 10px;">
+						<h3 style="color: #00f0ff; margin: 0;">📊 Queue Status</h3>
+						<div id="active-queue-area" style="margin-top: 15px;">
+							<p style="font-size: 0.9rem; color: #aaa;">Currently Serving:</p>
+							<h2 id="current-serving-number" style="color: #00f0ff; margin: 5px 0;">#---</h2>
+						</div>
+					</div>
+				</div>
+				<div id="details-screen" class="hidden">
+					<h1>Complete Your Details</h1>
+					<div class="form-group" style="text-align: left;">
+						<label style="display: block; margin: 15px 0 5px; color: #ccc;">Select Date:</label>
+						<input type="date" id="trans-date" required>
+						<label style="display: block; margin: 15px 0 5px; color: #ccc;">Select Time:</label>
+						<input type="time" id="trans-time" required>
+						<label style="display: block; margin: 15px 0 5px; color: #ccc;">Transaction Type:</label>
+						<select id="trans-type" required>
+							<option value="">-- Select --</option>
+							<option value="Tuition">Tuition</option>
+							<option value="Uniforms">Uniforms</option>
+							<option value="Books">Books</option>
+							<option value="Fees">Fees</option>
+							<option value="Enrollment">Enrollment</option>
+						</select>
+					</div>
+					<button class="finish-btn primary-btn" onclick="finishTransaction()" style="margin-top: 20px;">Submit</button>
+				</div>
+			</div>
+		</div>	
+	</main>
+	
+</body>
+</html>
